@@ -1,0 +1,7 @@
+.build
+credentials.conf
+local
+*.swo
+*.swp
+.tidyall.d
+/WebService-Fitbit*
