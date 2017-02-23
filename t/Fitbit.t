@@ -5,7 +5,6 @@ use Devel::Confess;
 use Path::Tiny qw( path );
 use Test::RequiresInternet ( 'api.fitbit.com' => 443 );
 use Test2::Bundle::Extended;
-use Test2::Compare qw( compare );
 use WWW::Mechanize;
 use WebService::Fitbit ();
 
@@ -28,12 +27,6 @@ if ( $ENV{DEBUG_FITBIT} ) {
 
     ok( $fitbit,                               'create object' );
     ok( !$fitbit->has_access_token_expiration, 'no expiration by default' );
-
-    #like(
-    #dies { $fitbit->get('/1/user/-/profile.json') },
-    #qr{Cannot refresh token}i,
-    #'exception on bad auth'
-    #);
 }
 
 my $filename = 'credentials.conf';
@@ -55,6 +48,17 @@ SKIP: {
 
     my $activities
         = $fitbit->get('/1/user/-/activities/date/2017-02-15.json');
+
+    # refresh tokens can only be used once.
+SKIP: {
+        skip 'Skipping refresh tests', 3, unless $ENV{FITBIT_REFRESH};
+        ok( $fitbit->refresh_access_token,        'refresh_access_token' );
+        ok( $fitbit->has_access_token_expiration, 'access_token_expiration' );
+        ok(
+            $config->{refresh_token} ne $fitbit->refresh_token,
+            'refresh_token updated'
+        );
+    }
 }
 
 sub get_config {
