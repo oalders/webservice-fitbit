@@ -3,6 +3,7 @@ package WebService::Fitbit;
 use Moo 2.003000;
 use MooX::StrictConstructor;
 
+use Data::Printer;
 use MIME::Base64 qw( encode_base64 );
 use Types::Standard qw( Bool InstanceOf Int Str );
 use Types::URI -all;
@@ -47,12 +48,11 @@ has _base_uri => (
     default  => 'https://api.fitbit.com',
 );
 
-has _refresh_token => (
+has refresh_token => (
     is       => 'ro',
     isa      => Str,
-    init_arg => 'refresh_token',
     required => 1,
-    writer   => '_set_token',
+    writer   => '_set_refresh_token',
 );
 
 has ua => (
@@ -131,17 +131,21 @@ sub refresh_access_token {
             $refresh_url,
             {
                 grant_type    => 'refresh_token',
-                refresh_token => $self->_refresh_token
+                refresh_token => $self->refresh_token
             },
             @headers
         )
     );
 
     my $auth = $res->content;
-    die 'Cannot refresh token: ' . $res->as_string unless $res->success;
+    unless ( $res->success ) {
+        die sprintf 'Cannot refresh token: %s %s',
+            $res->raw->headers->as_string, np($auth);
+    }
 
     $self->_set_access_token( $auth->{access_token} );
     $self->_set_access_token_expiration( time + $auth->{expires_in} );
+    $self->_set_refresh_token( $auth->{refresh_token} );
 
     return 1;
 }
